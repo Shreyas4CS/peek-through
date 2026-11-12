@@ -293,6 +293,14 @@ footer{position:relative;z-index:1;margin-top:auto}
 .cbar{height:8px;background:var(--soft);border-radius:99px;margin:8px 0 16px;overflow:hidden}
 .cbar i{display:block;height:100%;width:100%;background:var(--leaf);border-radius:99px;animation:drain 10s linear forwards}
 @keyframes drain{to{width:0}}
+.hint-badge{position:absolute;top:14px;right:16px;z-index:30;display:flex;align-items:center;gap:4px;font-weight:700;font-size:15px;background:#FFF6D6;color:var(--ink);border-radius:999px;padding:6px 14px;box-shadow:var(--sh-1);overflow:hidden;animation:opt-in .4s var(--ease-pop)}
+.hint-badge b{color:var(--cogno-d);font-variant-numeric:tabular-nums}
+.hint-badge i{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--sun);animation:drain linear forwards}
+.pw-modal{max-width:420px}
+.pw-modal .emoji{text-align:center}
+.pw-modal .cta-row{display:flex;gap:10px}
+.pw-modal .cta-row .btn{flex:1;width:auto}
+.field input.shake{animation:shake .4s;border-color:var(--red)}
 .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--ink);color:#fff;font-weight:700;padding:10px 20px;border-radius:999px;box-shadow:var(--sh-2);opacity:0;transition:.3s var(--ease-pop);z-index:70;pointer-events:none}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 .cheer-pics{display:flex;justify-content:center;gap:10px;margin:14px 0 4px}
@@ -387,7 +395,7 @@ footer{position:relative;z-index:1;margin-top:auto}
       <div class="cc"><span class="cc-i" style="background:var(--pink-soft);color:var(--pink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg></span><h3>Elimination</h3><p>Instead of guessing, players rule out blocked squares one window at a time until only the answer is left.</p></div>
       <div class="cc"><span class="cc-i" style="background:var(--cogno-soft);color:var(--cogno)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><h3>Visualisation</h3><p>Children imagine the windows stacked together before they see it. The slide-together reveal then checks their thinking.</p></div>
       <div class="cc"><span class="cc-i" style="background:var(--leaf-soft);color:var(--leaf)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h4v-6H3zM10 20h4V9h-4zM17 20h4V4h-4z"/></svg></span><h3>Step-by-step challenge</h3><p>The same rule grows from 1 window to 4 and from finding 1 picture to 2, so the concept deepens without feeling hard.</p></div>
-      <div class="cc"><span class="cc-i" style="background:#FFF6D6;color:#D9A400"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><h3>Learning from mistakes</h3><p>Hints grey out blocked pictures window by window, and wrong answers show the correct one, so every try teaches something.</p></div>
+      <div class="cc"><span class="cc-i" style="background:#FFF6D6;color:#D9A400"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><h3>Learning from mistakes</h3><p>With the teacher's password, a hint greys out blocked pictures for 10 seconds (3 per theme). Wrong answers show the correct one, so every try teaches something.</p></div>
     </div>
   </div>
 
@@ -588,6 +596,10 @@ const QN=LADDER.length;
 /* (TOTAL_Q defined after THEMES) */
 const basePts=c=>5+c.L*5+(c.n===4?5:0)+(c.k-1)*5;
 const MULT=[1,.6,.3];
+/* ---- hint settings (teacher can change these) ---- */
+const HINT_PASSWORD='cogno123';   /* password needed to show a hint */
+const HINTS_PER_THEME=3;          /* hints allowed in one theme round */
+const HINT_SECONDS=10;            /* how long a hint stays on screen */
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -661,7 +673,7 @@ function renderBoard(fit,q,opts={}){
 /* ===================== SESSION ===================== */
 const KEY='peekthrough.session.v1';
 let S=null;
-function fixSession(s){THEMES.forEach(t=>{if(s.prog[t.id]==null)s.prog[t.id]=0;if(!s.hist[t.id])s.hist[t.id]=[];});s.skipped=s.skipped||0;return s;}
+function fixSession(s){THEMES.forEach(t=>{if(s.prog[t.id]==null)s.prog[t.id]=0;if(!s.hist[t.id])s.hist[t.id]=[];});s.skipped=s.skipped||0;s.hintsLeft=s.hintsLeft||{};THEMES.forEach(t=>{if(s.hintsLeft[t.id]==null)s.hintsLeft[t.id]=HINTS_PER_THEME;});return s;}
 function loadSession(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.table&&s.prog){s.hist=s.hist||{};return fixSession(s);}}catch(e){}return null;}
 function saveSession(){if(!S)return;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function clearSession(){S=null;try{localStorage.removeItem(KEY);}catch(e){}}
@@ -749,13 +761,14 @@ function openForm(id){
 /* ===================== PLAY ===================== */
 let B=null,P=null,busy=false;
 function startTheme(id){
-  if(S.prog[id]>=QN){S.prog[id]=0;S.hist[id]=[];}
+  if(S.prog[id]>=QN){S.prog[id]=0;S.hist[id]=[];S.hintsLeft[id]=HINTS_PER_THEME;}
   if(!S.play||S.play.theme!==id)S.play=newPlay(id);
   saveSession();showPlay();
 }
 function newPlay(theme){const idx=S.prog[theme];return {theme,idx,q:makeQuestion(theme,LADDER[idx]),tries:0,hints:0,picked:[],wrong:[],done:false};}
 
 function showPlay(){
+  if(hintTimer)endHint();
   P=S.play;busy=false;
   const t=T_BY[P.theme],q=P.q;
   document.documentElement.style.setProperty('--tcol',t.col);document.documentElement.style.setProperty('--tsoft',t.soft);
@@ -774,7 +787,6 @@ function showPlay(){
 function drawBoard(enter){
   const fit=$('#boardFit');
   B=renderBoard(fit,P.q,{enter,maxH:Math.max(170,window.innerHeight-430)});
-  for(let h=0;h<P.hints;h++)B.dim(h);
 }
 let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(P&&!$('#play').hidden&&!busy){drawBoard(false);}if(heroQ&&!$('#home').hidden)renderBoard($('#heroFit'),heroQ,{max:120});},150);});
 
@@ -789,16 +801,53 @@ function renderOptions(){
   });
 }
 function updateTools(){
-  const q=P.q,left=q.L-P.hints;
-  $('#hintLeft').textContent=left?`${left} left`:'none left';
-  $('#hintBtn').disabled=!left||P.done;$('#skipBtn').disabled=P.done;
+  const q=P.q,left=S.hintsLeft[P.theme];
+  $('#hintLeft').textContent=left?`${left} of ${HINTS_PER_THEME} left`:'none left';
+  $('#hintBtn').disabled=!left||P.done||!!hintTimer;$('#skipBtn').disabled=P.done;
   const now=Math.max(1,Math.round(basePts(q)*MULT[Math.min(P.tries,2)])-P.hints*2);
   $('#worth').innerHTML=`Worth <b>${now}</b> points`;
 }
+let hintTimer=null;
 $('#hintBtn').onclick=()=>{
-  if(!P||P.done||P.hints>=P.q.L)return;
-  B.dim(P.hints);P.hints++;saveSession();updateTools();
+  if(!P||P.done||hintTimer||S.hintsLeft[P.theme]<=0)return;
+  const left=S.hintsLeft[P.theme];
+  modal(`<div class="modal form-modal pw-modal"><span class="emoji" aria-hidden="true">🔒</span><h2>Hint password</h2>
+    <p class="sub">Ask your teacher to enter the password. The hint shows for ${HINT_SECONDS} seconds. Hints left in this theme: <b>${left} of ${HINTS_PER_THEME}</b>.</p>
+    <form id="pwForm" novalidate>
+      <div class="field"><label for="pwIn">Password</label><input id="pwIn" type="password" autocomplete="off" placeholder="Enter password"></div>
+      <div class="err" id="pwErr" role="alert"></div>
+      <div class="cta-row"><button type="button" class="btn ghost" data-a="close">Cancel</button><button class="btn primary" type="submit">Show hint</button></div>
+    </form></div>`);
+  setTimeout(()=>$('#pwIn').focus(),60);
+  $('#pwForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const inp=$('#pwIn');
+    if(inp.value!==HINT_PASSWORD){$('#pwErr').textContent='That password is not right. Try again.';inp.value='';inp.classList.remove('shake');void inp.offsetWidth;inp.classList.add('shake');inp.focus();return;}
+    closeModal();
+    S.hintsLeft[P.theme]--;P.hints++;saveSession();
+    runHint();
+  });
 };
+/* hint: grey out every picture blocked by any window, for HINT_SECONDS */
+function runHint(){
+  const q=P.q;
+  q.masks.forEach((m,l)=>B.dim(l));
+  const card=$('.board-card');
+  card.insertAdjacentHTML('beforeend',`<div class="hint-badge" id="hintBadge">💡 Hint · <b id="hintSec">${HINT_SECONDS}</b>s<i style="animation-duration:${HINT_SECONDS}s"></i></div>`);
+  let sec=HINT_SECONDS;
+  hintTimer=setInterval(()=>{
+    sec--;const el=$('#hintSec');if(el)el.textContent=sec;
+    if(sec<=0)endHint();
+  },1000);
+  updateTools();
+}
+function endHint(){
+  clearInterval(hintTimer);hintTimer=null;
+  document.querySelectorAll('.panel.pics .cell.dim').forEach(c=>c.classList.remove('dim'));
+  const b=$('#hintBadge');if(b)b.remove();
+  if(P)updateTools();
+}
+
 
 async function pick(c,btn){
   if(!P||P.done||busy)return;
@@ -830,7 +879,7 @@ function afterWrong(){
 }
 
 async function solve(ok){
-  if(P.done)return;busy=true;
+  if(P.done)return;busy=true;if(hintTimer)endHint();
   const q=P.q,t=T_BY[P.theme];
   P.done=true;
   const stars=!ok?0:(P.tries===0&&P.hints===0)?3:(P.tries<=1)?2:1;
@@ -883,6 +932,7 @@ function showCheer(r){
 /* skip: no points, no penalty, straight to the next question */
 $('#skipBtn').onclick=()=>{
   if(!P||P.done||busy)return;
+  if(hintTimer)endHint();
   const t=T_BY[P.theme];
   P.done=true;S.skipped++;S.answered++;
   S.hist[t.id][P.idx]=-1;S.prog[t.id]=P.idx+1;
@@ -907,7 +957,7 @@ function allDone(){
     <div class="cta-row"><button class="btn ghost" data-a="close">Keep playing</button><button class="btn primary" data-a="end">End session</button></div></div>`,{end:showScore});
   confetti(90);
 }
-function hideAll(){closeModal();P=null;['#home','#pick','#play'].forEach(s=>$(s).hidden=true);}
+function hideAll(){if(hintTimer)endHint();closeModal();P=null;['#home','#pick','#play'].forEach(s=>$(s).hidden=true);}
 function showLanding(){hideAll();$('#home').hidden=false;updateNav();window.scrollTo({top:0,behavior:'instant'});}
 function showPick(){
   if(!S){showLanding();return;}
