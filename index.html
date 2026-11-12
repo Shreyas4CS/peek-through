@@ -21,7 +21,7 @@
   --sh-1:0 1px 2px rgba(39,37,79,.06),0 4px 14px -6px rgba(39,37,79,.14);
   --sh-2:0 2px 4px rgba(39,37,79,.05),0 18px 40px -18px rgba(39,37,79,.30);
   --ease-pop:cubic-bezier(.3,1.5,.5,1);
-  --skew:26deg;
+  --skew:20deg;
   color-scheme:light;
 }
 *{box-sizing:border-box}
@@ -79,7 +79,7 @@ main{flex:1;position:relative;z-index:1}
 .eye{position:absolute;left:0;display:grid;place-items:center;gap:2px;color:var(--muted);font-weight:700;font-size:12px;text-align:center;line-height:1.1}
 .eye svg{width:38px;height:38px;color:var(--ink);animation:look 2.4s ease-in-out infinite}
 @keyframes look{50%{transform:translateX(6px)}}
-.panel{position:absolute;top:0;display:grid;background:#fff;border:2px solid var(--ink);transform-origin:0 0;transform:translateX(0) skewY(var(--skew));transition:transform .75s cubic-bezier(.6,0,.2,1),box-shadow .4s,border-color .4s,background .4s;box-shadow:6px 6px 0 rgba(39,37,79,.07)}
+.panel{position:absolute;top:0;display:grid;background:#fff;border:2px solid var(--ink);transform-origin:0 0;transform:translateX(0) skewY(var(--skew));transition:transform var(--slide,1.6s) cubic-bezier(.45,0,.2,1),box-shadow .4s,border-color .4s,background .4s;box-shadow:6px 6px 0 rgba(39,37,79,.07)}
 .panel .cell{border:1px solid rgba(39,37,79,.85);min-width:0;min-height:0;position:relative;transition:background .45s,border-color .45s,opacity .4s,filter .4s}
 .panel.layer .cell.b{background:var(--ink)}
 .panel.layer .cell.w{background:#fff}
@@ -92,7 +92,7 @@ main{flex:1;position:relative;z-index:1}
 .panel-label b{color:var(--ink)}
 /* stacking: windows slide onto the pictures, white squares turn see-through */
 .board.stacked .panel.layer{background:transparent;border-color:rgba(39,37,79,.35);box-shadow:none}
-.board.stacked .panel.layer .cell.w{background:transparent;border-color:transparent}
+.board.stacked .panel.layer .cell.w{background:transparent;border-color:transparent;transition-delay:.5s;transition-duration:.9s}
 .board.stacked .panel.layer .cell.b{border-color:var(--ink)}
 .board.stacked .panel-label{opacity:0}
 .board.stacked .panel.pics{box-shadow:0 0 0 6px rgba(240,138,28,.18),10px 14px 30px -10px rgba(39,37,79,.35)}
@@ -189,7 +189,7 @@ main{flex:1;position:relative;z-index:1}
 @media (max-width:900px){.teaser,.concept{grid-template-columns:1fr}.concept-head{position:static}.teaser{padding:24px}}
 @media (max-width:560px){.concept-grid{grid-template-columns:1fr}.mystery .mq{width:58px;height:58px;font-size:26px;border-radius:16px}}
 /* ---------- play ---------- */
-#play{padding-block:18px 28px;display:flex;flex-direction:column;gap:16px}
+#play{max-width:1340px;padding-block:12px 24px;display:flex;flex-direction:column;gap:12px}
 .play-head{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
 .back{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:15px;color:var(--muted);background:none;border:0;padding:4px 2px}
 .back:hover{color:var(--ink)}
@@ -203,9 +203,10 @@ main{flex:1;position:relative;z-index:1}
 .dots i.miss{background:#F3B2B4}
 .dots i.skip{background:#C9C6E0}
 .dots i.cur{background:var(--tcol,var(--cogno));transform:scale(1.4)}
-.board-card{background:var(--paper);border-radius:30px;box-shadow:var(--sh-1);padding:26px 22px 14px;position:relative}
+.board-card{background:var(--paper);border-radius:30px;box-shadow:var(--sh-1);padding:18px 18px 6px;position:relative}
 .board-fit{width:100%}
-.ask{display:flex;flex-direction:column;align-items:center;gap:14px}
+.ask{display:flex;flex-direction:column;align-items:center;gap:10px}
+@media (max-height:820px) and (min-width:700px){.prompt small{display:none}.opt{width:clamp(58px,9.5vh,84px)}.ask{gap:8px}#play{gap:10px}}
 .prompt{font-family:var(--display);font-weight:600;font-size:clamp(19px,2.2vw,24px);text-align:center;margin:0}
 .prompt small{display:block;font-family:var(--body);font-weight:600;font-size:15px;color:var(--muted)}
 .options{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
@@ -632,20 +633,25 @@ function makeQuestion(theme,cfg){
 }
 
 /* ===================== BOARD RENDERER ===================== */
-const SKEW=Math.tan(26*Math.PI/180);
+const STACK_SEC=1.6,STACK_GAP=.45;   /* slide time and pause between windows */
+const SKEW_DEG=20,SKEW=Math.tan(SKEW_DEG*Math.PI/180);
 function renderBoard(fit,q,opts={}){
   const L=q.L,count=L+1;
   const W=fit.clientWidth||600;
   const eyeW=opts.eye===false?0:(W<480?40:54);
-  const gap=Math.max(12,Math.min(34,W*.03));
-  const maxH=opts.maxH||9999,minP=74;
-  /* how many panels fit side by side; wrap to more rows on narrow screens */
-  let cols=count;
-  while(cols>2&&(W-eyeW-(cols-1)*gap)/cols<minP)cols--;
-  const rows=Math.ceil(count/cols);
-  let p=Math.min(opts.max||170,(W-eyeW-(cols-1)*gap)/cols,((maxH/rows)-28)/(1+SKEW));
-  p=Math.max(44,Math.floor(p));
-  const h=p*(1+SKEW),rowH=h+(opts.labels===false?6:30);
+  const gap=Math.max(12,Math.min(22,W*.018));
+  const maxH=opts.maxH||9999,labelH=opts.labels===false?6:30;
+  /* try every layout (1 row, 2 rows…) and keep the one with the biggest panels */
+  let best={p:0,cols:count};
+  for(let c=count;c>=2;c--){
+    const r=Math.ceil(count/c);
+    const pw=(W-eyeW-(c-1)*gap)/c,ph=(maxH/r-labelH)/(1+SKEW);
+    const pp=Math.min(opts.max||320,pw,ph);
+    if(pp>best.p+8)best={p:pp,cols:c};
+  }
+  const cols=best.cols,rows=Math.ceil(count/cols);
+  let p=Math.max(44,Math.floor(best.p));
+  const h=p*(1+SKEW),rowH=h+labelH;
   const total=eyeW+cols*p+(cols-1)*gap;
   const board=document.createElement('div');board.className='board';
   board.style.width=total+'px';board.style.height=(rows*rowH)+'px';
@@ -664,7 +670,7 @@ function renderBoard(fit,q,opts={}){
   const pics=panels[L];
   return {
     board,panels,pics,
-    stack(on){const tx=+pics.dataset.left,ty=+pics.dataset.top;panels.slice(0,L).forEach((el,i)=>{el.style.transitionDelay=on?`${(L-1-i)*.12}s`:`${i*.08}s`;el.style.transform=on?`translate(${tx-el.dataset.left}px,${ty-el.dataset.top}px) skewY(26deg)`:'';});board.classList.toggle('stacked',on);},
+    stack(on){const tx=+pics.dataset.left,ty=+pics.dataset.top;panels.slice(0,L).forEach((el,i)=>{el.style.transitionDelay=on?`${(L-1-i)*STACK_GAP}s`:`${i*.1}s`;el.style.transform=on?`translate(${tx-el.dataset.left}px,${ty-el.dataset.top}px) skewY(${SKEW_DEG}deg)`:'';});board.classList.toggle('stacked',on);},
     mark(cells,cls){cells.forEach(c=>pics.children[c].classList.add(cls));},
     dim(layer){q.masks[layer].forEach((v,c)=>{if(!v)pics.children[c].classList.add('dim');});},
   };
@@ -721,8 +727,8 @@ async function heroLoop(){
     const B=renderBoard(fit,heroQ,{max:120,enter:true});
     cap.innerHTML='Look through both windows…';
     await wait(2600);B.stack(true);cap.innerHTML='Slide them together…';
-    await wait(1300);B.mark(heroQ.answers,'hit');cap.innerHTML=`Only the <b>${ICON_BY[heroQ.items[heroQ.answers[0]]][0]}</b> shows through!`;
-    await wait(2600);B.stack(false);await wait(900);
+    await wait(STACK_SEC*1000+STACK_GAP*1000+300);B.mark(heroQ.answers,'hit');cap.innerHTML=`Only the <b>${ICON_BY[heroQ.items[heroQ.answers[0]]][0]}</b> shows through!`;
+    await wait(3000);B.stack(false);await wait(1800);
   }
 }
 
@@ -776,17 +782,21 @@ function showPlay(){
   $('#qNum').textContent=`${t.name} · Question ${P.idx+1} of ${QN}`;
   $('#qTag').textContent=`${q.L} window${q.L>1?'s':''} · ${q.n}×${q.n}`;
   $('#dots').innerHTML=[...Array(QN)].map((_,i)=>`<i class="${i<P.idx?(S.hist[t.id][i]===-1?'skip':S.hist[t.id][i]?'ok':'miss'):i===P.idx?'cur':''}"></i>`).join('');
-  drawBoard(true);
   $('#prompt').innerHTML=q.k===1
     ?(q.L===1?'Which picture can you see through the window?':`Which picture can you see through all ${q.L} windows?`)+'<small>A square is open only if it is white on every window.</small>'
     :`Which <b>2</b> pictures can you see through all ${q.L} windows?<small>Pick both pictures.</small>`;
   renderOptions();
   $('#toolbar').hidden=false;
   updateTools();
+  drawBoard(true);
 }
 function drawBoard(enter){
   const fit=$('#boardFit');
-  B=renderBoard(fit,P.q,{enter,maxH:Math.max(170,window.innerHeight-430)});
+  fit.innerHTML='';
+  const card=$('.board-card'),top=card.getBoundingClientRect().top+window.scrollY;
+  const askH=$('#ask').offsetHeight;
+  const room=window.innerHeight-top-askH-36-28;   /* card padding + gaps */
+  B=renderBoard(fit,P.q,{enter,maxH:Math.max(240,room)});
 }
 let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(P&&!$('#play').hidden&&!busy){drawBoard(false);}if(heroQ&&!$('#home').hidden)renderBoard($('#heroFit'),heroQ,{max:120});},150);});
 
@@ -894,12 +904,12 @@ async function solve(ok){
   /* show it */
   document.querySelectorAll('.opt').forEach(b=>{b.disabled=true;if(q.answers.includes(+b.dataset.c)){b.classList.remove('sel');b.classList.add('right');if(!b.querySelector('.mark'))b.insertAdjacentHTML('beforeend','<span class="mark">✓</span>');}});
   $('#hintBtn').disabled=true;
-  await wait(250);B.stack(true);
-  await wait(900+q.L*120);B.mark(q.answers,'hit');
+  await wait(400);B.stack(true);
+  await wait(STACK_SEC*1000+(q.L-1)*STACK_GAP*1000+300);B.mark(q.answers,'hit');
   if(ok){updateNav();bumpPoints();confetti(stars===3?70:35);}
   const names=q.answers.map(c=>ICON_BY[q.items[c]][0]);
   const said=names.length>1?`${names[0]} and ${names[1]}`:names[0];
-  await wait(700);
+  await wait(1600);
   showCheer({ok,stars,pts,said,answers:q.answers.map(c=>q.items[c]),last,theme:t});
   busy=false;
 }
